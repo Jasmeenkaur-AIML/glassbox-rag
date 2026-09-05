@@ -83,10 +83,12 @@ threshold, the system refuses to answer rather than forcing an answer from irrel
 - Move to semantic/section-based chunking using document headings.
 - Build a labeled eval set to track verifier accuracy over time.
 
+## Live Demo
+🔗 [Try it here](https://glassbox-rag-kuuovq4gthiamxtql5whgq.streamlit.app/) — deployed on Streamlit Community Cloud using Groq's free-tier API (swapped from local Ollama for deployability; the app auto-builds its vector database from the source PDF on first run).
+
 ## Running It Locally
 ```bash
 pip install -r requirements.txt
-ollama pull llama3.2
 python ingest.py        # one-time: builds the vector database
 streamlit run app.py    # launches the UI
 ```
