@@ -1,12 +1,13 @@
 import streamlit as st
 import chromadb
-import requests
+from groq import Groq
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL = "llama3.2"
-DISTANCE_THRESHOLD = 1.3
+MODEL = "openai/gpt-oss-20b"
+DISTANCE_THRESHOLD = 1.15
 
 st.set_page_config(page_title="Glass-Box RAG", page_icon="📘")
+
+client_groq = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 
 @st.cache_resource
@@ -45,9 +46,12 @@ Answer:"""
 
 
 def generate_answer(prompt):
-    response = requests.post(OLLAMA_URL, json={"model": MODEL, "prompt": prompt, "stream": False})
-    response.raise_for_status()
-    return response.json()["response"]
+    response = client_groq.chat.completions.create(
+        model=MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.2,
+    )
+    return response.choices[0].message.content
 
 
 def build_verification_prompt(answer, chunks):
