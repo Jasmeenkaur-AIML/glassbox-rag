@@ -1,19 +1,61 @@
 import streamlit as st
 import chromadb
+import pdfplumber
+import re
 from groq import Groq
 
 MODEL = "openai/gpt-oss-20b"
 DISTANCE_THRESHOLD = 1.15
+PDF_PATH = "data/notes.pdf"
+CHUNK_SIZE = 500
 
 st.set_page_config(page_title="Glass-Box RAG", page_icon="📘")
 
 client_groq = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 
+def extract_text(pdf_path):
+    text = ""
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            page_text = page.extract_text(x_tolerance=1.5, y_tolerance=3)
+            if page_text:
+                text += page_text + "\n"
+    return text
+
+
+def chunk_text(text, chunk_size=CHUNK_SIZE):
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    chunks = []
+    current_chunk = ""
+    for sentence in sentences:
+        if len(current_chunk) + len(sentence) <= chunk_size:
+            current_chunk += sentence + " "
+        else:
+            if current_chunk:
+                chunks.append(current_chunk.strip())
+            current_chunk = sentence + " "
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+    return chunks
+
+
 @st.cache_resource
 def get_collection():
     client = chromadb.PersistentClient(path="./chroma_db")
-    return client.get_collection("notes")
+
+    try:
+        return client.get_collection("notes")
+    except Exception:
+        with st.spinner("First-time setup: processing notes.pdf..."):
+            text = extract_text(PDF_PATH)
+            chunks = chunk_text(text)
+            collection = client.create_collection("notes")
+            collection.add(
+                documents=chunks,
+                ids=[f"chunk_{i}" for i in range(len(chunks))]
+            )
+        return collection
 
 
 collection = get_collection()
